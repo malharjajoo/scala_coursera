@@ -34,10 +34,10 @@ object Anagrams {
    *
    *  Note: you must use `groupBy` to implement this method!
    */
-  def wordOccurrences(w: Word): Occurrences = ???
+  def wordOccurrences(w: Word): Occurrences = w.toLowerCase.toList.groupBy(x => x).map(p => (p._1, p._2.length)).toList.sortWith(_._1 < _._1)
 
   /** Converts a sentence into its character occurrence list. */
-  def sentenceOccurrences(s: Sentence): Occurrences = ???
+  def sentenceOccurrences(s: Sentence): Occurrences = wordOccurrences(s.mkString(""))
 
   /** The `dictionaryByOccurrences` is a `Map` from different occurrences to a sequence of all
    *  the words that have that occurrence count.
@@ -54,10 +54,10 @@ object Anagrams {
    *    List(('a', 1), ('e', 1), ('t', 1)) -> Seq("ate", "eat", "tea")
    *
    */
-  lazy val dictionaryByOccurrences: Map[Occurrences, List[Word]] = ???
+  lazy val dictionaryByOccurrences: Map[Occurrences, List[Word]] = dictionary.groupBy(w => wordOccurrences(w))
 
   /** Returns all the anagrams of a given word. */
-  def wordAnagrams(word: Word): List[Word] = ???
+  def wordAnagrams(word: Word): List[Word] = dictionaryByOccurrences(wordOccurrences(word))
 
   /** Returns the list of all subsets of the occurrence list.
    *  This includes the occurrence itself, i.e. `List(('k', 1), ('o', 1))`
@@ -81,7 +81,22 @@ object Anagrams {
    *  Note that the order of the occurrence list subsets does not matter -- the subsets
    *  in the example above could have been displayed in some other order.
    */
-  def combinations(occurrences: Occurrences): List[Occurrences] = ???
+  def combinations(occurrences: Occurrences): List[Occurrences] = occurrences match {
+    case Nil => List(List[(Char,Int)]())
+    case (ch, n)::xs =>
+      val temp = combinations(xs)
+
+     val check = for ( i <- 0 to n ) yield {
+       if (i == 0) temp
+       else
+         for (elem <- temp) yield {
+           (ch, i) :: elem
+         }
+     }
+
+      val check2 = check.foldLeft(List(List[(Char,Int)]()))((x,y) => x++y)
+      check2.toSet.toList
+  }
 
   /** Subtracts occurrence list `y` from occurrence list `x`.
    *
@@ -93,7 +108,20 @@ object Anagrams {
    *  Note: the resulting value is an occurrence - meaning it is sorted
    *  and has no zero-entries.
    */
-  def subtract(x: Occurrences, y: Occurrences): Occurrences = ???
+  def subtract(x: Occurrences, y: Occurrences): Occurrences = {
+
+    def subHelper(acc:Map[Char,Int], y_elem:(Char,Int) ): Map[Char,Int] =
+    {
+        val (ch,i) = y_elem
+        val temp = acc(ch) - i
+
+        if(temp == 0) acc-ch // cannot use -= on immutable map ...
+        else acc.updated(ch, acc(ch) - i)
+    }
+
+    val acc = x.toMap
+    y.foldLeft(acc)(subHelper).toList.sortWith(_._1 < _._1)
+  }
 
   /** Returns a list of all anagram sentences of the given sentence.
    *
@@ -135,5 +163,99 @@ object Anagrams {
    *
    *  Note: There is only one anagram of an empty sentence.
    */
-  def sentenceAnagrams(sentence: Sentence): List[Sentence] = ???
+
+  // permutes a word
+  def permute(word:Word, sentence:Sentence):List[Sentence] = {
+
+    def helper(acc:List[Sentence], splitIndices:List[Int]): List[Sentence] = splitIndices match {
+      case Nil => acc
+      case i::is => val (first_half:Sentence, second_half:Sentence) = sentence.splitAt(i)
+
+                    val currentSentence:Sentence = first_half ++ List(word) ++ second_half
+                     helper(acc ++ List(currentSentence), is)
+    }
+
+    val acc = List[Sentence]()
+    helper(acc, (0 to sentence.length).toList )
+
+  }
+
+  def myHelper(remainingOccurence:Occurrences):List[Sentence] = {
+
+    // Sorry for using "var" Scala, Imperative languages will always be my first love :P .
+    var acc: List[Sentence] = List[Sentence]()
+
+    // find all possible words from remaining occurrences.
+    val subsets = combinations(remainingOccurence)
+    //println("remainingOccurences=",remainingOccurence)
+
+    // For each subset (word)
+    for (subset <- subsets) {
+
+      val k = dictionaryByOccurrences.get(subset)
+
+
+      //println("current subset =",subset)
+      // if current subset is not a valid word,
+      // then don't need to do anything about remaining characters
+      // simply move on to next subset
+      if(k.isDefined)
+      {
+
+          val meaningfulWords = k.get
+          val remainder = subtract(remainingOccurence, subset)
+
+
+
+        //println("meaningfulWords =",meaningfulWords)
+        //println("remainder =",remainder)
+
+          // if current subset is meaningful and there are no remaining characters
+          if (remainder.isEmpty) {
+            //println("1")
+            acc = acc ++ List(meaningfulWords)
+          }
+
+          // if current subset is meaningful and remaining occurrences is not empty,
+          // then remaining occurences must return a list of sentences otherwise skip current subset ....
+          else
+          {
+            //println("2")
+            val remainingSentence: List[Sentence] = myHelper(remainder)
+          //println("remaining sentence=",remainingSentence)
+            // this means that remaining characters were recognized by dictionary.
+            // If this is not the case, we skip current subset (and remaining characters)
+            if(remainingSentence != List(List(Nil)) ) {
+
+              // permute meaningful words with remaining sentence.
+              for (myword <- meaningfulWords) {
+                for (sent <- remainingSentence) {
+                  acc = acc ++ permute(myword, sent)
+                }
+              }
+
+            }
+
+          }
+
+         //println("acc =", acc)
+
+      }
+      //else println("No meaningful word found in dictionary..")
+
+    }
+
+    return acc
+  }
+
+
+  def sentenceAnagrams(s: Sentence): List[Sentence] = s match {
+
+    case Nil => List(Nil)
+    case _ =>
+       val occurList = sentenceOccurrences(s)
+       val res = myHelper(occurList)
+      // HACK. Need to get rid of this at some point ....
+      res.filter(x => sentenceOccurrences(x) == occurList )
+      }
 }

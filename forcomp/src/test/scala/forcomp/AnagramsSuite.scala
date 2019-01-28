@@ -96,8 +96,12 @@ class AnagramsSuite extends FunSuite  {
       List("Zulu", "nil", "Rex"),
       List("rulez", "Linux"),
       List("Linux", "rulez")
-    )
-    assert(sentenceAnagrams(sentence).toSet === anas.toSet)
+    ).toSet
+
+    val check = sentenceAnagrams(sentence).toSet
+    println("testing ...")
+    println("Differnce =",check.diff(anas) )
+    assert( check === anas)
   }
 
 }
