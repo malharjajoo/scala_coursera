@@ -58,6 +58,32 @@ class BloxorzSuite extends FunSuite {
     }
   }
 
+  test("neighboursWithHistory level1 check"){
+    new Level1{
+      val lhs = neighborsWithHistory(Block(Pos(1,1),Pos(1,1)), List(Left,Up)).toList
+      val rhs = List((Block(Pos(1,2),Pos(1,3)), List(Right,Left,Up)),
+                     (Block(Pos(2,1),Pos(3,1)), List(Down, Left,Up)))
+      assert(lhs == rhs)
+    }
+  }
+
+  test("newNeighborsOnly level1 check"){
+    new Level1{
+      val lhs = newNeighborsOnly(
+        Set(
+          (Block(Pos(1,2),Pos(1,3)), List(Right,Left,Up)),
+          (Block(Pos(2,1),Pos(3,1)), List(Down,Left,Up))
+        ).toStream,
+
+        Set(Block(Pos(1,2),Pos(1,3)), Block(Pos(1,1),Pos(1,1)))
+      )
+
+      val rhs = Set((Block(Pos(2,1),Pos(3,1)), List(Down,Left,Up))).toStream
+
+      assert(lhs == rhs)
+    }
+  }
+
 	test("findChar level 1") {
     new Level1 {
       assert(startPos == Pos(1,1))
@@ -67,6 +93,7 @@ class BloxorzSuite extends FunSuite {
 
 	test("optimal solution for level 1") {
     new Level1 {
+      val x = solve(solution)
       assert(solve(solution) == Block(goal, goal))
     }
   }
