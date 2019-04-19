@@ -34,8 +34,11 @@ trait BinomialHeap extends Heap {
 
   protected def root(t: Node) = t.x
   protected def rank(t: Node) = t.r
+
+  // Nodes must be of same "degree/order/rank" for them to be linked.
   protected def link(t1: Node, t2: Node): Node = // t1.r==t2.r
     if (ord.lteq(t1.x,t2.x)) Node(t1.x, t1.r+1, t2::t1.c) else Node(t2.x, t2.r+1, t1::t2.c)
+
   protected def ins(t: Node, ts: H): H = ts match {
     case Nil => List(t)
     case tp::ts => // t.r<=tp.r
@@ -46,6 +49,7 @@ trait BinomialHeap extends Heap {
   override def isEmpty(ts: H) = ts.isEmpty
 
   override def insert(x: A, ts: H) = ins(Node(x,0,Nil), ts)
+
   override def meld(ts1: H, ts2: H) = (ts1, ts2) match {
     case (Nil, ts) => ts
     case (ts, Nil) => ts
@@ -65,6 +69,9 @@ trait BinomialHeap extends Heap {
   override def deleteMin(ts: H) = ts match {
     case Nil => throw new NoSuchElementException("delete min of empty heap")
     case t::ts =>
+
+      // gets the node with minimum root value and also returns the
+      // remaining list of nodes (without the  minimum node)
       def getMin(t: Node, ts: H): (Node, H) = ts match {
         case Nil => (t, Nil)
         case tp::tsp =>
